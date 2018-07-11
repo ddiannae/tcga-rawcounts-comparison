@@ -1,15 +1,13 @@
 
-setwd("~/Workspace/raw-counts-comparison")
-load(file="healthyRawLegacy.RData")
-load(file="cancerRawLegacy.RData")
+setwd("~/Workspace/rnapipeline/tcga-rawcounts-comparison")
 
 annot <- read.delim(file="Biomart_EnsemblG92_GRCh38_p12_NCBI.txt", sep="\t")
 names(annot) <- c("EnsemblId", "Chr", "Start", "End", "GC", "Type", "Symbol", "EntrezId")
 dim(annot)
 ## [1] 64927     8
 levels(annot$Chr)
-annot<-annot[annot$Chr%in%c(as.character(1:22), "X", "Y"),]
-annot$Chr<-droplevels(annot$Chr)
+annot <- annot[annot$Chr%in%c(as.character(1:22), "X", "Y"),]
+annot$Chr <- droplevels(annot$Chr)
 table(annot$Chr)
 dim(annot)
 ## [1] 58519     8
@@ -25,18 +23,33 @@ dim(annot.entrezna)
 ## [1] 39054     8
 
 ###### Healthy Data Frame
+load(file = "cancerRawLegacy.RData")
+load(file = "healthyRawLegacy.RData")
+
 normal.df <- data.frame(normal$Counts)
 tumor.df <- data.frame(tumor$Counts)
+
 head(normal.df)
 dim(normal.df)
 ## [1] 20532   101
+
+head(tumor.df)
+dim(tumor.df)
+## [1] 20532   773
+size <- unique(rbind(dim(normal$Counts), dim(tumor$Counts))[1])
+##Check if the genes match positions
+genes <- cbind(tumor$Annot[,2], normal$Annot[,2])
+genes <- t(unique(t(genes)))
+stopifnot(dim(genes) == c(size[1], 1))
+
 rownames(normal.df) <- as.numeric(normal$Annot[,2])
+rownames(tumor.df) <- as.numeric(tumor$Annot[,2])
 head(normal.df)
-##[1] 20532     2
+head(tumor.df)
 head(normal$Annot[,2])
+head(tumor$Annot[,2])
 setdiff(normal$Annot[,2], tumor$Annot[,2])
-length(normal$Annot)
-length(tumor$Annot)
+## character(0)
 all.entrez <- unique(annot$EntrezId)
 length(all.entrez)
 #[1] 19338
@@ -46,14 +59,28 @@ out.entrez.ids <- which(!(rownames(normal.df) %in% all.entrez))
 normal.df <- normal.df[-out.entrez.ids, ]
 dim(normal.df)
 #[1] 18578   101
+tumor.df <- tumor.df[-out.entrez.ids, ]
+dim(tumor.df)
+#[1] 18578   773
+
 normal$Annot <- normal$Annot[-out.entrez.ids,]
 dim(normal$Annot)
 #[1] 18578     2
 
+tumor$Annot <- tumor$Annot[-out.entrez.ids, ]
+dim(tumor$Annot)
+# [1] 18578     2
+## Check again
+size <- unique(rbind(dim(normal.df), dim(tumor.df))[1])
+genes <- cbind(tumor$Annot[,2], normal$Annot[,2], rownames(tumor.df), rownames(normal.df))
+genes <- t(unique(t(genes)))
+stopifnot(dim(genes)==c(size[1], 1))
+
+
 ################ Merge and remove duplicates
 annot.normal <- data.frame(normal$Annot, stringsAsFactors = FALSE)
 ##Add Biomart data
-merged.annot<-merge(x=annot.normal, y=annot, by="EntrezId", all=F, sort=FALSE)
+merged.annot <- merge(x=annot.normal, y=annot, by="EntrezId", all=F, sort=FALSE)
 dim(merged.annot)
 #[1] 18639     9
 merged.annot[duplicated(merged.annot[,c("EntrezId", "EnsemblId")]), ]
@@ -76,7 +103,7 @@ dim(merged.annot)
 
 ##### Duplicates. EnsemblId
 dup.ensembl.ids <- which(duplicated(merged.annot$EnsemblId))
-dup.ensembl <-unique(merged.annot[dup.ensembl.ids, "EnsemblId"])
+dup.ensembl <- unique(merged.annot[dup.ensembl.ids, "EnsemblId"])
 dup.ensembl.rows <- merged.annot[which(merged.annot$EnsemblId %in% dup.ensembl), ]
 dim(dup.ensembl.rows)
 ###[1] 75  9
@@ -105,7 +132,7 @@ dup.entrez.in.dup.ensembl
 # 2787    644019    CBWD6 ENSG00000215126 41131306 41199261   9 36.14 protein_coding    CBWD6
 
 ### Duplicates. Entrez.Ids
-dup.entrez.ids <-which(duplicated(merged.annot$EntrezId))
+dup.entrez.ids <- which(duplicated(merged.annot$EntrezId))
 dup.entrez <- unique(merged.annot[dup.entrez.ids, "EntrezId"])
 dup.entrez.rows <- merged.annot[which(merged.annot$EntrezId %in% dup.entrez), ]
 dim(dup.entrez.rows)
@@ -194,7 +221,7 @@ dup.ensembl.rows <- dup.ensembl.rows[order(dup.ensembl.rows$EntrezId), ]
 dim(dup.ensembl.rows)
 ## [1] 62  9
 dup.ensembl.rows
-write.table(dup.ensembl.rows, file = "dup_ensembl_rows.tsv", quote=F, sep="\t")
+##write.table(dup.ensembl.rows, file = "dup_ensembl_rows.tsv", quote=F, sep="\t")
 ### Check one by one
 ### Remove the ones with no EnsemblId
 ids.to.remove = c("6338", "6341", "6340", "6073", "6337", "6339", "6343")
@@ -204,30 +231,30 @@ dim(merged.annot)
 ##[1] 18622     9
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000160014" & merged.annot$EntrezId == "808", ]
-merged.annot["2652",] = merged.annot["2653",]
+merged.annot["2652",] <- merged.annot["2653",]
 merged.annot["2652",]
 merged.annot[merged.annot$EnsemblId == "ENSG00000160014", ]
 merged.annot[merged.annot$EntrezId == merged.annot["2652", "EntrezId"], ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000196735" & merged.annot$EntrezId == "3117", ]
-merged.annot["7374",] = merged.annot["7373",]
+merged.annot["7374",] <- merged.annot["7373",]
 merged.annot["7374",]
 merged.annot[merged.annot$EnsemblId == "ENSG00000196735", ]
 merged.annot[merged.annot$EntrezId == merged.annot["7374", "EntrezId"], ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000231887" & merged.annot$EntrezId == "5554", ]
-merged.annot["12754",] = merged.annot["12755", ]
+merged.annot["12754",] <- merged.annot["12755", ]
 merged.annot["12755", ]
 merged.annot[merged.annot$EnsemblId == "ENSG00000231887", ]
 merged.annot[merged.annot$EntrezId == merged.annot["12755", "EntrezId"], ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000177954" & merged.annot$EntrezId == "6232", ]
-merged.annot["13942",] = merged.annot["13941",]
+merged.annot["13942",] <- merged.annot["13941",]
 merged.annot[merged.annot$EnsemblId == "ENSG00000177954", ]
 merged.annot[merged.annot$EntrezId == merged.annot["13941", "EntrezId"], ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000172062" & merged.annot$EntrezId == "6606", ]
-merged.annot["15115",] = merged.annot["15114",]
+merged.annot["15115",] <- merged.annot["15114",]
 merged.annot[merged.annot$EnsemblId == "ENSG00000172062", ]
 merged.annot[merged.annot$EntrezId == merged.annot["15115", "EntrezId"] , ]
 
@@ -242,7 +269,7 @@ merged.annot[merged.annot$EnsemblId == "ENSG00000244682", ]
 merged.annot[merged.annot$EntrezId == "9103", ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000256060" & merged.annot$EntrezId == "10597", ]
-merged.annot["16795",] = merged.annot["16796",]
+merged.annot["16795",] <- merged.annot["16796",]
 merged.annot[merged.annot$EnsemblId == "ENSG00000256060", ]
 merged.annot[merged.annot$EntrezId == merged.annot["16795", "EntrezId"] , ]
 
@@ -267,7 +294,7 @@ merged.annot[merged.annot$EnsemblId == "ENSG00000188092", ]
 merged.annot[merged.annot$EntrezId == merged.annot["6879", "EntrezId"], ]
 
 merged.annot[merged.annot$EnsemblId == "ENSG00000187272" & merged.annot$EntrezId == "83901", ]
-merged.annot["8772",] = merged.annot["8771",]
+merged.annot["8772",] <- merged.annot["8771",]
 merged.annot[merged.annot$EntrezId == merged.annot["8772", "EntrezId"] , ]
 merged.annot[merged.annot$EnsemblId == "ENSG00000187272", ]
 
@@ -322,9 +349,9 @@ dup.ensembl.rows <- merged.annot[which(merged.annot$EnsemblId %in% dup.ensembl),
 dim(dup.ensembl.rows)
 ### [1] 16  9
 length(unique(dup.ensembl.rows$EntrezId))
-dup.ensembl.rows[order(dup.ensembl.rows$EnsemblId, dup.ensembl.rows$EntrezId), ]
+dup.ensembl.rows <- dup.ensembl.rows[order(dup.ensembl.rows$EnsemblId, dup.ensembl.rows$EntrezId), ]
 
-# EntrezId Symbol.x       EnsemblId Chr     Start       End    GC           Type Symbol.y
+#       EntrezId Symbol.x       EnsemblId Chr     Start       End    GC           Type Symbol.y
 # 13248    23637  RABGAP1 ENSG00000011454   9 122940833 123104866 38.49 protein_coding  RABGAP1 
 # 6841      2844    GPR21 ENSG00000011454   9 122940833 123104866 38.49 protein_coding  RABGAP1 GPR21 is a small gene that overlaps with RABGAP1. Sum the counts
 # 9381     23499    MACF1 ENSG00000127603   1  39081316  39487177 42.57 protein_coding    MACF1 
@@ -341,16 +368,128 @@ dup.ensembl.rows[order(dup.ensembl.rows$EnsemblId, dup.ensembl.rows$EntrezId), ]
 # 6465      2657     GDF1 ENSG00000223802  19  18868545  18896727 57.34 protein_coding    CERS1 LASS1 and GDF1 overlap. Start - End covers both. Sum the counts
 # 5338      2074    ERCC6 ENSG00000225830  10  49455368  49539538 40.54 protein_coding    ERCC6
 # 12046   267004    PGBD3 ENSG00000225830  10  49455368  49539538 40.54 protein_coding    ERCC6 PGBD3 is a small gene that overlaps with ERCC6. Sum the counts
+##write.table(dup.ensembl.rows, file = "final_dup_ensembl_rows.tsv", quote=F, sep="\t")
 
-#### Get the Counts
-dup.ensembl.ids <- which(rownames(normal.df) %in% dup.ensembl.rows$EntrezId)
-dup.ensembl.rows$EE <- paste(dup.ensembl.rows$EnsemblId, dup.ensembl.rows$EntrezId, sep=".")
-length(dup.ensembl.ids)
-dup.ensembl.counts <- normal.df[dup.ensembl.ids, ] 
-rownames(dup.ensembl.counts) <- dup.ensembl.rows$EE
-dup.ensembl.counts <- dup.ensembl.counts[order(rownames(dup.ensembl.counts)), ]
-
+### Duplicated EntrezId
 dup.entrez.ids <-which(duplicated(merged.annot$EntrezId))
 dup.entrez <- unique(merged.annot[dup.entrez.ids, "EntrezId"])
 dup.entrez.rows <- merged.annot[which(merged.annot$EntrezId %in% dup.entrez), ]
 dim(dup.entrez.rows)
+##write.table(dup.entrez.rows, file = "dup_entrez_rows.tsv", quote=F, sep="\t")
+## check manually
+ids.to.remove = c("910", "943", "2810", "3957", "4502", "7497", "7758", "8027", "9281", "10507",
+                  "11773", "11904", "11918", "12137", "13275", "13279", "14205", "14234", "14382",
+                  "15945", "16258", "16400", "17924", "18185")
+merged.annot[ids.to.remove, ]
+merged.annot <- merged.annot[!(rownames(merged.annot) %in% ids.to.remove), ]
+dim(merged.annot)
+##[1] 18581     9
+## Keep the smallest ensemblIds for duplicated entrez
+merged.annot$Row <- 1:nrow(merged.annot) 
+merged.annot <- merged.annot[order(merged.annot$EntrezId, merged.annot$EnsemblId), ]
+dup.entrez.ids <-which(duplicated(merged.annot$EntrezId))
+length(dup.entrez.ids)
+## [1] 10
+merged.annot[dup.entrez.ids, ]
+merged.annot <- merged.annot[-dup.entrez.ids, ]
+dim(merged.annot)
+##[1] 18571     9
+which(duplicated(merged.annot$EntrezId))
+## integer(0) DONE!
+
+### Before summing the counts for duplicated ensemblIds, remove all the unwanted EntrezId in 
+### normal.df and tumor.df
+tumor.df <- tumor.df[rownames(tumor.df) %in% merged.annot$EntrezId, ]
+dim(tumor.df)
+## [1] 18571   773
+normal.df <- normal.df[rownames(normal.df) %in% merged.annot$EntrezId, ]
+dim(normal.df)
+## [1] 18571   101
+
+#### Sum the Counts
+
+rnames.tumor <- rownames(tumor.df)
+rnames.normal <- rownames(normal.df)
+sum.counts.tumor <- tumor.df[rnames.tumor == "23637", ] + tumor.df[rnames.tumor == "2844", ]
+tumor.df[rnames.tumor == "23637", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "23637", ] +  normal.df[rnames.normal == "2844", ]
+normal.df[rnames.normal == "23637", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "23499", ] + tumor.df[rnames.tumor == "643314", ]
+tumor.df[rnames.tumor == "23499", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "23499", ] + normal.df[rnames.normal == "643314", ]
+normal.df[rnames.normal == "23499", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "26290", ] + tumor.df[rnames.tumor == "3742", ]
+tumor.df[rnames.tumor == "26290", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "26290", ] + normal.df[rnames.normal == "3742", ]
+normal.df[rnames.normal == "26290", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "84953", ] + tumor.df[rnames.tumor == "9645", ]
+tumor.df[rnames.tumor == "84953", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "84953", ] + normal.df[rnames.normal == "9645", ]
+normal.df[rnames.normal == "84953", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "285464", ] + tumor.df[rnames.tumor == "57654", ]
+tumor.df[rnames.tumor == "285464", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "285464", ] + normal.df[rnames.normal == "57654", ]
+normal.df[rnames.normal == "285464", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "57654", ] + tumor.df[rnames.tumor == "23285", ]
+tumor.df[rnames.tumor == "57654", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "57654", ] + normal.df[rnames.normal == "23285", ]
+normal.df[rnames.normal == "57654", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "10715", ] + tumor.df[rnames.tumor == "2657", ]
+tumor.df[rnames.tumor == "10715", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "10715", ] + normal.df[rnames.normal == "2657", ]
+normal.df[rnames.normal == "10715", ] <- sum.counts.normal
+
+sum.counts.tumor  <- tumor.df[rnames.tumor == "2074", ] + tumor.df[rnames.tumor == "267004", ]
+tumor.df[rnames.tumor == "2074", ] <- sum.counts.tumor
+sum.counts.normal <- normal.df[rnames.normal == "2074", ] + normal.df[rnames.normal == "267004", ]
+normal.df[rnames.normal == "2074", ] <- sum.counts.normal
+
+entrez.to.remove <- c("2844", "643314", "3742", "9645", "57654", "23285", "2657", "267004")
+tumor.df <- tumor.df[!(rownames(tumor.df) %in% entrez.to.remove), ]
+normal.df <- normal.df[!(rownames(normal.df) %in% entrez.to.remove), ]
+merged.annot <- merged.annot[!(merged.annot$EntrezId %in% entrez.to.remove), ]
+
+dim(tumor.df)
+## [1] 18563   773
+dim(normal.df)
+## [1] 18563   101
+dim(merged.annot)
+##[1] 18563     9
+
+which(duplicated(merged.annot$EntrezId))
+## integer(0)
+which(duplicated(merged.annot$EnsemblId))
+## integer(0)
+
+## DONE!
+## Order again
+merged.annot <- merged.annot[order(merged.annot$Row), ]
+head(merged.annot, n=15L)
+head(normal.df)
+head(tumor.df)
+
+## Check they're all in the same order
+size <- unique(rbind(dim(normal.df), dim(tumor.df))[1])
+genes <- cbind(merged.annot$EntrezId, rownames(tumor.df), rownames(normal.df))
+genes <- t(unique(t(genes)))
+stopifnot(dim(genes)==c(size[1], 1))
+
+normal$Counts <- data.matrix(normal.df, rownames.force = F)
+normal$Annot <- as.character(merged.annot$EnsemblId)
+
+tumor$Counts <- data.matrix(tumor.df, rownames.force = F)
+tumor$Annot <- as.character(merged.annot$EnsemblId)
+
+merged.annot <- merged.annot[, -2]
+merged.annot <- merged.annot[, -9]
+colnames(merged.annot) <- c("EntrezId", "EnsemblId", "Chr", "Start", "End", "GC", "Type", "Symbol")
+
+save(merged.annot, file="annotEntrez.RData", compress="xz")
+save(normal, file="healthyRawCleanLegacy.RData", compress="xz")
+save(tumor, file="cancerRawCleanLegacy.RData", compress="xz")

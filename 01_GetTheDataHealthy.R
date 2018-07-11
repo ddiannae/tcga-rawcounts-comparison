@@ -52,6 +52,7 @@ colnames(normal) <- targets$ID
 
 ##Let's change the annotation. Remove Ensembl version
 genes<-do.call(rbind,sapply(genes[,1], strsplit, split=".", fixed=TRUE))
+colnames(genes)<-c("EnsemblId", "version")
 
 ##Save clean data
 normal<-list(Counts=normal, Annot=genes[,1], targets=targets)

@@ -134,12 +134,14 @@ cancer.all <- cancer.all[order(cancer.all$filename.new), ]
 tumorFileNames <- cbind(tumorFiles, cancer.all$filename.new)
 tumorFileNames <- t(unique(t(tumorFileNames)))
 stopifnot(dim(tumorFileNames)==c(length(tumorFiles), 1))
+
 targets<-data.frame(File=tumorFiles, ID=paste("T", 1:length(tumorFiles), sep=""), Case=cancer.all$caseid)
 colnames(tumor)<-targets$ID
 
 ##Let's change the annotation
 genes<-do.call(rbind,sapply(genes[,1], strsplit, split=".", fixed=TRUE))
-colnames(genes)<-c("EnsemblID", "version")
+colnames(genes)<-c("EnsemblId", "version")
+
 tumor<-list(Counts=tumor, Annot=genes[,1], targets=targets)
 save(tumor, file="cancerRawNew.RData", compress="xz")
 cat('cancerRawNew.RData saved \n')
@@ -149,7 +151,7 @@ load(file="cancerFiles.RData")
 tumorFiles <- cancer.all$filename.legacy 
 tumorFiles <- sort(tumorFiles)
 is.unsorted(tumorFiles)
-tumor <- bplapply(paste("legacy/cancer", tumorFiles, sep="/"), read.delim, sep="\t", header=F, col.names=c("gene", "raw_counts", "median_length_normalized", "RPKM"))
+tumor <- bplapply(paste("legacy/cancer", tumorFiles, sep="/"), read.delim, sep="\t", header=T)
 length(intersect(tumorFiles, cancer.all$filename.legacy))
 
 ##Check if all samples have the same size
@@ -162,7 +164,7 @@ genes<-do.call(cbind,lapply(tumor, function(x)as.character(x[,1])))
 genes<-t(unique(t(genes)))
 stopifnot(dim(genes)==c(size[1,1], 1))
 cat('Genes in tumor samples match positions \n')
-
+dim(genes)
 ##Lets keep only the raw counts
 tumor<-do.call(cbind, lapply(tumor, function(x)x[,"raw_counts"]))
 
