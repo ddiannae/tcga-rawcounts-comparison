@@ -1,0 +1,6 @@
+*.RData
+*.log
+legacy/*
+new/*
+*.tsv
+*.cys

@@ -1,4 +1,4 @@
-setwd("~/Workspace/raw-counts-comparison")
+setwd("~/Workspace/tcga-rawcounts-comparison")
 
 ### Map new and old files for tumor
 cancer.legacy <- read.table("fileid_caseid_filename_legacy_cancer.txt", sep=",", header=TRUE, stringsAsFactors = FALSE)
@@ -6,6 +6,8 @@ colnames(cancer.legacy) <- c("filename", "submitterid", "caseid", "fileid")
 cancer.new <- read.table("fileid_caseid_filename_new_cancer.txt", sep=",", header=TRUE, stringsAsFactors = FALSE)
 colnames(cancer.new) <- c("filename", "submitterid", "caseid", "fileid")
 
+## 777 cancer.legacy samples
+## 785 cancer.new
 ####################### Remove duplicated CaseIds
 dup.caseids <- unique(cancer.new[which(duplicated(cancer.new$caseid)), "caseid"])
 cancer.new.dup.caseid.all <- cancer.new[cancer.new$caseid %in% dup.caseids, ] 
